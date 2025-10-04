@@ -1,0 +1,992 @@
+<html lang="en" class="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>netsim</title>
+    <meta content="netsim" property="og:title" />
+    <meta content="websim.ai clone that's actually good" property="og:description" />
+    <meta content="https://netsim.us.to" property="og:url" />
+    <meta content="https://netsim.us.to/netsimlogo.png" property="og:image" />
+    <meta content="#bae2a3" data-react-helmet="true" name="theme-color" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {}
+            }
+        }
+    </script>
+    <!-- Poppins Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.5/dist/purify.min.js"></script>
+    <!-- Syntax highlighting - Fixed to use browser version -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/github.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/languages/xml.min.js"></script>
+    <!-- Font Awesome for Discord icon -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Poppins', sans-serif;
+            padding-top: 76px; /* Add padding to accommodate fixed header */
+        }
+        
+        .header-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background: white;
+            z-index: 1000;
+            border-bottom: 1px solid #eaeaea;
+            transition: background-color 0.3s ease;
+        }
+        
+        .dark .header-container {
+            background: #1f2937;
+            border-bottom: 1px solid #374151;
+        }
+        
+        .prompt-bar {
+            transition: all 0.3s ease;
+        }
+        
+        .prompt-bar:focus-within {
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5);
+            transform: translateY(-1px);
+        }
+        
+        .prompt-bar.expanded {
+            height: auto;
+        }
+        
+        .icon-btn {
+            transition: all 0.2s ease;
+        }
+        
+        .icon-btn:hover {
+            background-color: #f3f4f6;
+            transform: translateY(-1px);
+        }
+        
+        .dark .icon-btn:hover {
+            background-color: #374151;
+        }
+        
+        #model-dropdown {
+            transform-origin: top center;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            position: absolute;
+            z-index: 100;
+            margin-top: 1px;
+            left: 50%;
+            transform: translateX(-50%) scale(0.95);
+            width: 260px; /* Make dropdown smaller */
+        }
+        
+        #model-dropdown.hidden {
+            opacity: 0;
+            transform: translateX(-50%) scale(0.95);
+            pointer-events: none;
+        }
+        
+        #model-dropdown.visible {
+            opacity: 1;
+            transform: translateX(-50%) scale(1);
+        }
+        
+        .loading-dots span {
+            animation: loadingDot 1.4s infinite ease-in-out;
+        }
+        
+        .loading-dots span:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        
+        .loading-dots span:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        
+        @keyframes loadingDot {
+            0%, 80%, 100% { opacity: 0; }
+            40% { opacity: 1; }
+        }
+        
+        #code-container {
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 13px;
+            line-height: 1.5;
+            overflow-x: auto;
+            background-color: #f8f9fa;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            transition: background-color 0.3s ease;
+        }
+        
+        .dark #code-container {
+            background-color: #111827;
+            color: #e5e7eb;
+        }
+        
+        .preview-container {
+            background-color: white;
+            transition: background-color 0.3s ease;
+        }
+        
+        .dark .preview-container {
+            background-color: #111827;
+        }
+        
+        .sidebar {
+            position: fixed;
+            right: -400px;
+            top: 76px;
+            bottom: 0;
+            width: 400px;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 900;
+            border-left: 1px solid rgba(229, 231, 235, 0.5);
+            overflow-y: auto;
+            box-shadow: -10px 0 30px rgba(0, 0, 0, 0.05);
+            transform: translateX(0);
+        }
+        
+        .dark .sidebar {
+            background: rgba(31, 41, 55, 0.8);
+            border-left: 1px solid rgba(55, 65, 81, 0.5);
+            box-shadow: -10px 0 30px rgba(0, 0, 0, 0.3);
+        }
+        
+        .sidebar.left-sidebar {
+            right: auto;
+            left: -400px;
+            border-left: none;
+            border-right: 1px solid rgba(229, 231, 235, 0.5);
+            box-shadow: 10px 0 30px rgba(0, 0, 0, 0.05);
+        }
+        
+        .dark .sidebar.left-sidebar {
+            border-right: 1px solid rgba(55, 65, 81, 0.5);
+            box-shadow: 10px 0 30px rgba(0, 0, 0, 0.3);
+        }
+        
+        .sidebar.left-sidebar.open {
+            transform: translateX(400px);
+        }
+        
+        .sidebar.open {
+            transform: translateX(-400px);
+        }
+        
+        .sidebar-section {
+            padding: 1.5rem;
+            border-bottom: 1px solid rgba(229, 231, 235, 0.5);
+            transition: all 0.3s ease;
+        }
+        
+        .dark .sidebar-section {
+            border-bottom: 1px solid rgba(55, 65, 81, 0.5);
+        }
+        
+        .sidebar-section:last-child {
+            border-bottom: none;
+        }
+        
+        .sidebar-section-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1rem;
+            padding-bottom: 0.5rem;
+            border-bottom: 2px solid rgba(59, 130, 246, 0.1);
+        }
+        
+        .sidebar-section-title {
+            font-size: 1rem;
+            font-weight: 600;
+            color: #1f2937;
+            margin-left: 0.75rem;
+        }
+        
+        .dark .sidebar-section-title {
+            color: #f3f4f6;
+        }
+        
+        .sidebar-icon {
+            width: 1.25rem;
+            height: 1.25rem;
+            color: #3b82f6;
+        }
+        
+        .website-item, .version-item {
+            transition: all 0.2s ease;
+            transform-origin: center;
+        }
+        
+        .website-item:hover, .version-item:hover {
+            transform: translateX(4px);
+        }
+        
+        #code-container {
+            font-family: 'Fira Code', monospace;
+            font-size: 0.875rem;
+            line-height: 1.6;
+            padding: 1.25rem;
+            border-radius: 0.75rem;
+            background: rgba(243, 244, 246, 0.8);
+            border: 1px solid rgba(229, 231, 235, 0.5);
+            transition: all 0.3s ease;
+        }
+        
+        .dark #code-container {
+            background: rgba(17, 24, 39, 0.8);
+            border-color: rgba(55, 65, 81, 0.5);
+        }
+        
+        .model-option {
+            transition: all 0.2s ease;
+            border-radius: 0.5rem;
+            padding: 0.5rem !important;
+        }
+        
+        .model-option .text-sm {
+            line-height: 1.25;
+        }
+        
+        .model-option:hover {
+            background-color: rgba(59, 130, 246, 0.1);
+        }
+        
+        .model-option input:checked + span {
+            color: #3b82f6;
+            font-weight: 500;
+        }
+        
+        .model-option input:checked + span::before {
+            content: '';
+            position: absolute;
+            left: -1.5rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 0.5rem;
+            height: 0.5rem;
+            border-radius: 50%;
+            background-color: #3b82f6;
+        }
+        
+        .model-option input:checked + span::after {
+            content: '';
+            position: absolute;
+            right: -8px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 16px;
+            height: 16px;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%233b82f6'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M5 13l4 4L19 7'%3E%3C/path%3E%3C/svg%3E");
+            background-size: contain;
+        }
+        
+        #preview-container {
+            min-height: calc(100vh - 76px);
+            height: calc(100vh - 76px);
+            overflow: hidden;
+        }
+        
+        #preview-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        
+        .sidebar-overlay {
+            position: fixed;
+            top: 76px;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(2px);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.4s ease;
+            z-index: 899;
+        }
+
+        .sidebar-overlay.active {
+            opacity: 1;
+            visibility: visible;
+        }
+
+        /* Added for copy button */
+        .copy-button {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            padding: 0.5rem;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 0.5rem;
+            transition: all 0.2s ease;
+            border: 1px solid rgba(229, 231, 235, 0.5);
+        }
+
+        .dark .copy-button {
+            background: rgba(31, 41, 55, 0.9);
+            border-color: rgba(55, 65, 81, 0.5);
+        }
+
+        .copy-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .copy-button.copied {
+            background: #10B981;
+            color: white;
+        }
+
+        /* Tab Styles */
+        [data-tab] {
+            color: #6B7280;
+        }
+
+        [data-tab].active {
+            color: #3B82F6;
+        }
+
+        [data-tab].active .tab-indicator {
+            transform: scaleX(1);
+        }
+
+        [data-tab-content] {
+            transition: opacity 0.2s ease;
+        }
+
+        [data-tab-content].active {
+            opacity: 1;
+        }
+
+        /* Updated sidebar styles */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar-section {
+            flex-shrink: 0;
+        }
+
+        #websites-content, #versions-content, #code-container {
+            scrollbar-width: thin;
+            scrollbar-color: rgba(156, 163, 175, 0.5) transparent;
+        }
+
+        #websites-content::-webkit-scrollbar,
+        #versions-content::-webkit-scrollbar,
+        #code-container::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #websites-content::-webkit-scrollbar-track,
+        #versions-content::-webkit-scrollbar-track,
+        #code-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        #websites-content::-webkit-scrollbar-thumb,
+        #versions-content::-webkit-scrollbar-thumb,
+        #code-container::-webkit-scrollbar-thumb {
+            background: rgba(156, 163, 175, 0.5);
+            border-radius: 3px;
+        }
+
+        .dark #websites-content::-webkit-scrollbar-thumb,
+        .dark #versions-content::-webkit-scrollbar-thumb,
+        .dark #code-container::-webkit-scrollbar-thumb {
+            background: rgba(75, 85, 99, 0.5);
+        }
+        
+        /* Discord Modal Styles */
+        #discordModal {
+            transition: opacity 0.3s ease;
+            z-index: 9999;
+        }
+        
+        #discordModal.hidden {
+            opacity: 0;
+            pointer-events: none;
+        }
+        
+        #discordModal .modal-content {
+            transform: scale(0.95);
+            transition: transform 0.3s ease;
+        }
+        
+        #discordModal:not(.hidden) .modal-content {
+            transform: scale(1);
+        }
+        
+        /* Add loading animation styles */
+        @keyframes loadingText {
+            0% { opacity: 0.5; }
+            50% { opacity: 1; }
+            100% { opacity: 0.5; }
+        }
+
+        .prompt-input.generating {
+            color: #6B7280;
+            animation: loadingText 1.5s ease-in-out infinite;
+            cursor: not-allowed;
+            background: rgba(209, 213, 219, 0.1);
+        }
+
+        .dark .prompt-input.generating {
+            color: #9CA3AF;
+            background: rgba(55, 65, 81, 0.1);
+        }
+        
+        /* Add these new styles */
+        .website-menu {
+            transform-origin: top right;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+        }
+        
+        .website-menu.hidden {
+            opacity: 0;
+            transform: scale(0.95);
+            pointer-events: none;
+        }
+        
+        .website-menu:not(.hidden) {
+            opacity: 1;
+            transform: scale(1);
+        }
+        
+        .group:hover .website-menu-btn {
+            opacity: 1;
+        }
+        
+        /* Add more hover effects */
+        .rename-website:hover i,
+        .duplicate-website:hover i,
+        .export-website:hover i {
+            color: #3b82f6;
+        }
+        
+        .delete-website:hover i {
+            color: #ef4444;
+        }
+        
+        /* Reasoning Effort Dropdown Styles */
+        #reasoning-effort-dropdown {
+            transform-origin: top center;
+            transition: opacity 0.2s ease, transform 0.2s ease;
+            position: absolute;
+            z-index: 100;
+            margin-top: 1px;
+            transform: translateX(-50%) scale(0.95);
+            width: 160px;
+        }
+        #reasoning-effort-dropdown.hidden {
+            opacity: 0;
+            transform: translateX(-50%) scale(0.95);
+            pointer-events: none;
+        }
+        #reasoning-effort-dropdown.visible {
+            opacity: 1;
+            transform: translateX(-50%) scale(1);
+        }
+    </style>
+</head>
+<body class="bg-gray-50 dark:bg-gray-900 min-h-screen text-gray-800 dark:text-gray-200">
+    <div class="header-container">
+        <div class="max-w-screen-2xl mx-auto px-4">
+            <!-- Navigation Bar -->
+            <div class="flex items-center justify-between py-4">
+                <!-- Left Navigation Icons -->
+                <div class="flex items-center space-x-2">
+                    <button class="icon-btn p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                        </svg>
+                    </button>
+                    <button class="icon-btn p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700" id="new-chat-btn">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 4v16m8-8H4" />
+                        </svg>
+                    </button>
+                    <button class="icon-btn p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                        </svg>
+                    </button>
+                </div>
+
+                <!-- Prompt Bar -->
+                <div class="flex-1 max-w-3xl mx-4">
+                    <form id="prompt-form" class="prompt-bar relative flex flex-col bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 shadow-sm">
+                        <div class="flex items-center w-full">
+                            <div class="absolute left-3">
+                                <div class="w-7 h-7 rounded-full bg-gray-100 dark:bg-gray-700 flex items-center justify-center">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                                    </svg>
+                                </div>
+                            </div>
+                            <input
+                                type="text"
+                                id="prompt-input"
+                                class="prompt-input w-full py-3 pl-12 pr-28 rounded-xl focus:outline-none bg-transparent text-sm dark:text-white"
+                                placeholder="Describe the website you want to create..."
+                            >
+                            <div class="absolute right-3 flex items-center">
+                                <button type="button" id="model-toggle" class="px-2 py-1 text-xs font-medium text-gray-600 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-md hover:bg-gray-200 dark:hover:bg-gray-600 flex items-center">
+                                    <span id="selected-model-display">GPT-4.1 Nano</span>
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </button>
+                            </div>
+                            <input type="hidden" name="model" value="openai">
+                        </div>
+                    </form>
+                    
+                    <!-- Custom Model Dropdown (outside the prompt bar) -->
+                    <div id="model-dropdown" class="hidden absolute z-10 mt-1 w-80 right-0 left-auto bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700">
+                        <div class="p-3">
+                            <!-- Free Models -->
+                            <div class="mb-4" data-tier="Free">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Free</span>
+                                    <span class="text-xs text-green-500">0 credits</span>
+                                </div>
+                                <div class="space-y-2">
+                                    <div class="model-option cursor-pointer p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" data-value="openai" data-name="GPT-4.1 Nano" data-default="true">
+                                        <div class="text-sm dark:text-gray-300">
+                                            <span class="font-medium">GPT-4.1 Nano <span class="text-xs inline-block bg-green-100 text-green-600 rounded px-1 ml-1">NEW</span><span class="text-xs inline-block bg-blue-100 text-blue-600 rounded px-1 ml-1">POPULAR</span></span>
+                                            <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">Balanced performance and speed</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Basic Models -->
+                            <div class="mb-4" data-tier="Basic">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Basic</span>
+                                    <span class="text-xs text-blue-500">1 credit</span>
+                                </div>
+                                <div class="space-y-2">
+                                    <div class="model-option cursor-pointer p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" data-value="llama" data-name="Llama 3.3 70B">
+                                        <div class="text-sm dark:text-gray-300">
+                                            <span class="font-medium">Llama 3.3 70B</span>
+                                            <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">High-performance large language model</span>
+                                        </div>
+                                    </div>
+                                    <div class="model-option cursor-pointer p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" data-value="llamascout" data-name="Llama 4 Scout 17B">
+                                        <div class="text-sm dark:text-gray-300">
+                                            <span class="font-medium">Llama 4 Scout 17B <span class="text-xs inline-block bg-green-100 text-green-600 rounded px-1 ml-1">NEW</span></span>
+                                            <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">Specialized in reasoning tasks</span>
+                                        </div>
+                                    </div>
+                                    <div class="model-option cursor-pointer p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" data-value="qwen-coder" data-name="Qwen 2.5 Coder">
+                                        <div class="text-sm dark:text-gray-300">
+                                            <span class="font-medium">Qwen 2.5 Coder <span class="text-xs inline-block bg-blue-100 text-blue-600 rounded px-1 ml-1">POPULAR</span></span>
+                                            <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">Specialized in code generation</span>
+                                        </div>
+                                    </div>
+                                    <div class="model-option cursor-pointer p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" data-value="qwen-qwq" data-name="Qwen QwQ 32B">
+                                        <div class="text-sm dark:text-gray-300">
+                                            <span class="font-medium">
+                                                Qwen QwQ 32B
+                                            </span>
+                                            <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                                                Enhanced reasoning capabilities
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div class="model-option cursor-pointer p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" data-value="deepseek-r1-llama" data-name="DeepSeek R1 Distill Llama 70B">
+                                        <div class="text-sm dark:text-gray-300">
+                                            <span class="font-medium">DeepSeek R1 Distill Llama 70B</span>
+                                            <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">Distilled high-performance model</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Premium Models -->
+                            <div data-tier="Premium">
+                                <div class="flex justify-between items-center mb-2">
+                                    <span class="text-sm font-semibold text-gray-700 dark:text-gray-300">Premium</span>
+                                    <span class="text-xs text-purple-500">5 credits</span>
+                                </div>
+                                <div class="space-y-2">
+                                    <div class="model-option cursor-pointer p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" data-value="openai-reasoning" data-name="o4-mini">
+                                        <div class="text-sm dark:text-gray-300">
+                                            <span class="font-medium">o4-mini <span class="text-xs inline-block bg-green-100 text-green-600 rounded px-1 ml-1">NEW</span></span>
+                                            <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">Advanced reasoning capabilities</span>
+                                        </div>
+                                    </div>
+                                    <div class="model-option cursor-pointer p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md" data-value="openai-large" data-name="GPT-4.1 Mini">
+                                        <div class="text-sm dark:text-gray-300">
+                                            <span class="font-medium">GPT-4.1 Mini <span class="text-xs inline-block bg-green-100 text-green-600 rounded px-1 ml-1">NEW</span><span class="text-xs inline-block bg-blue-100 text-blue-600 rounded px-1 ml-1">POPULAR</span></span>
+                                            <span class="block text-xs text-gray-500 dark:text-gray-400 mt-0.5">Most powerful for complex designs</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Right Navigation -->
+                <div class="flex items-center space-x-3">
+                    <!-- Reasoning Effort Button & Dropdown -->
+                    <button id="reasoning-effort-btn" class="icon-btn p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 relative flex items-center justify-center" style="display:none;">
+                        <i class="fas fa-brain"></i>
+                    </button>
+                    <div id="reasoning-effort-dropdown" class="hidden absolute z-10 mt-1 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700">
+                        <div class="p-2 flex flex-col space-y-1">
+                            <div class="reasoning-option cursor-pointer px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2" data-value="low" title="Low">
+                                <i class="fas fa-brain"></i><span class="text-sm">Low</span>
+                            </div>
+                            <div class="reasoning-option cursor-pointer px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2" data-value="medium" title="Medium">
+                                <i class="fas fa-brain"></i><span class="text-sm">Medium</span>
+                            </div>
+                            <div class="reasoning-option cursor-pointer px-2 py-1 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center gap-2" data-value="high" title="High">
+                                <i class="fas fa-brain"></i><span class="text-sm">High</span>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Import HTML Button -->
+                    <label for="import-html" class="icon-btn p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 cursor-pointer">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                        </svg>
+                        <input type="file" id="import-html" accept=".html" class="hidden">
+                    </label>
+
+                    <!-- Settings Button -->
+                    <button id="settings-btn" class="icon-btn p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                    </button>
+                    
+                    <!-- Dark Mode Toggle -->
+                    <button id="dark-mode-toggle" class="icon-btn p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 hidden dark:inline-block" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                        </svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline-block dark:hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                        </svg>
+                    </button>
+                
+                    <!-- Sidebar Toggle Button -->
+                    <button id="sidebar-toggle-btn" class="icon-btn p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6h16M4 12h16M4 18h7" />
+                        </svg>
+                    </button>
+                    
+                    <!-- Login Button -->
+                    <button id="loginButton" class="bg-blue-500 hover:bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-medium transition-all duration-200 ease-in-out hover:shadow-md">
+                        Log in
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content - Full Screen Preview -->
+    <div class="preview-container">
+        <div id="preview-container" class="w-full h-full">
+            <div class="flex items-center justify-center h-full text-gray-400 dark:text-gray-500">
+                <div class="text-center p-8">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                    </svg>
+                    <p class="text-lg">Enter a prompt to generate your website</p>
+                    <p class="text-sm mt-2">Your result will appear here in full screen</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Sidebar Overlay -->
+    <div id="sidebar-overlay" class="sidebar-overlay"></div>
+    
+    <!-- Sidebar -->
+    <div id="sidebar" class="sidebar">
+        <div class="h-full flex flex-col">
+            <!-- Top Tab Navigation -->
+            <div class="sidebar-section border-b border-gray-200 dark:border-gray-700">
+                <div class="flex space-x-1" role="tablist">
+                    <button class="flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-colors relative" data-tab="websites" role="tab" aria-selected="true">
+                        <div class="flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                            </svg>
+                            Websites
+                        </div>
+                        <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 transform scale-x-0 transition-transform origin-left tab-indicator"></div>
+                    </button>
+                    <button class="flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-colors relative" data-tab="versions" role="tab" aria-selected="false">
+                        <div class="flex items-center justify-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            Versions
+                        </div>
+                        <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 transform scale-x-0 transition-transform origin-left tab-indicator"></div>
+                    </button>
+                    <button class="flex-1 px-4 py-2 text-sm font-medium rounded-lg transition-colors relative" data-tab="code" role="tab" aria-selected="false">
+                        <div class="flex items-center justify-center">
+                            <i class="fas fa-code h-4 w-4 mr-2"></i>
+                            Code
+                        </div>
+                        <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-500 transform scale-x-0 transition-transform origin-left tab-indicator"></div>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Search Bar -->
+            <div class="p-4 border-b border-gray-200 dark:border-gray-700">
+                <div class="relative">
+                    <input type="text" id="sidebar-search" placeholder="Search..." class="w-full px-4 py-2 pl-10 bg-gray-100 dark:bg-gray-700/50 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:text-gray-300">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 absolute top-3 left-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Stats Bar -->
+            <div class="px-4 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                <div class="flex justify-between text-xs text-gray-500 dark:text-gray-400">
+                    <span>Total Websites: <span id="total-websites">0</span></span>
+                    <span>Total Versions: <span id="total-versions">0</span></span>
+                </div>
+            </div>
+
+            <!-- Main Content Area -->
+            <div class="flex-1 overflow-y-auto">
+                <div class="h-full" data-tab-content="websites">
+                    <div class="p-4">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">Your Websites</h3>
+                            <button class="text-xs text-blue-500 hover:text-blue-600 dark:text-blue-400" onclick="document.getElementById('new-chat-btn').click()">
+                                + New Website
+                            </button>
+                        </div>
+                        <div id="websites-content" class="space-y-2">
+                            <!-- Websites dynamically added here -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="h-full hidden" data-tab-content="versions">
+                    <div class="p-4">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">Version History</h3>
+                            <div class="flex space-x-2">
+                                <button class="text-xs text-gray-500 hover:text-gray-600 dark:text-gray-400" id="export-versions">
+                                    Export
+                                </button>
+                                <button class="text-xs text-red-500 hover:text-red-600" id="clear-versions">
+                                    Clear All
+                                </button>
+                            </div>
+                        </div>
+                        <div id="versions-content" class="space-y-2">
+                            <!-- Versions dynamically added here -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="h-full hidden" data-tab-content="code">
+                    <div class="p-4">
+                        <div class="flex justify-between items-center mb-4">
+                            <div class="flex items-center space-x-2">
+                                <h3 class="text-sm font-medium text-gray-700 dark:text-gray-300">Source Code</h3>
+                                <div class="px-2 py-1 text-xs bg-gray-100 dark:bg-gray-700 rounded-full text-gray-500 dark:text-gray-400">HTML</div>
+                            </div>
+                            <div class="flex space-x-2">
+                                <button id="format-code" class="text-xs text-gray-500 hover:text-gray-600 dark:text-gray-400">
+                                    Format
+                                </button>
+                                <button id="copy-code-btn" class="text-xs text-blue-500 hover:text-blue-600 dark:text-blue-400">
+                                    Copy
+                                </button>
+                            </div>
+                        </div>
+                        <div class="relative">
+                            <pre id="code-container" class="text-sm"></pre>
+                            <div class="absolute bottom-4 right-4 flex space-x-2">
+                                <button class="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600" title="Download Code">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                                    </svg>
+                                </button>
+                                <button class="p-2 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600" title="Share">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-gray-500 dark:text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <div class="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50">
+                <div class="flex justify-between items-center text-xs text-gray-500 dark:text-gray-400">
+                    <span>BETA v0.1.0</span>
+                    <button id="close-sidebar" class="hover:text-gray-700 dark:hover:text-gray-300">
+                        Close
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Loading indicator -->
+    <div id="loading-indicator" class="hidden fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 bg-white dark:bg-gray-800 p-4 rounded-xl shadow-lg">
+        <div class="loading-dots flex space-x-2">
+            <span class="w-3 h-3 bg-blue-400 rounded-full inline-block"></span>
+            <span class="w-3 h-3 bg-blue-400 rounded-full inline-block"></span>
+            <span class="w-3 h-3 bg-blue-400 rounded-full inline-block"></span>
+        </div>
+    </div>
+
+    <!-- Discord Login Modal -->
+    <div id="discordModal" class="fixed inset-0 z-[9999] flex items-center justify-center hidden">
+        <div class="fixed inset-0 bg-black/50 backdrop-blur-sm"></div>
+        <div class="bg-white dark:bg-gray-800 rounded-lg shadow-2xl w-96 p-6 relative">
+            <button id="closeModal" class="absolute top-3 right-3 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition">
+                <i class="fas fa-times fa-lg"></i>
+            </button>
+            <div class="text-center mt-4">
+                <!-- Netsim Logo -->
+                <img src="https://netsim.us.to/netsimlogo.png" alt="Netsim Logo" class="mb-4 w-40 mx-auto">
+                <h2 class="text-3xl font-bold mb-2 text-gray-900 dark:text-white">Welcome Back!</h2>
+                <p class="text-gray-600 dark:text-gray-400 mb-6">Please login to continue.</p>
+                <form class="mb-4">
+                    <div class="mb-4">
+                        <label for="username" class="block text-left text-gray-700 dark:text-gray-300">Username</label>
+                        <input type="text" id="username" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Enter your username" required>
+                    </div>
+                    <div class="mb-4">
+                        <label for="password" class="block text-left text-gray-700 dark:text-gray-300">Password</label>
+                        <input type="password" id="password" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Enter your password" required>
+                    </div>
+                    <button type="submit" class="w-full flex items-center justify-center mb-4 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 focus:outline-none transition">
+                        <i class="fas fa-arrow-right-to-bracket mr-2"></i>
+                        Login
+                    </button>
+                </form>
+                <div class="mb-4">
+                    <span class="block text-gray-500 dark:text-gray-400">or login with</span>
+                </div>
+                <button id="discordLoginBtn" class="w-full flex items-center justify-center px-4 py-2 bg-gray-400 text-white rounded-lg cursor-not-allowed" disabled>
+                    <i class="fab fa-discord mr-2"></i>
+                    Continue with Discord
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Import HTML Coming Soon Modal -->
+    <div id="importHtmlModal" class="fixed inset-0 z-[9999] flex items-center justify-center hidden">
+        <div class="fixed inset-0 bg-black/50 backdrop-blur-sm"></div>
+        <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-xl relative z-10 w-[400px] transform transition-all scale-100">
+            <div class="text-center">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto mb-4 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                <h3 class="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-2">Import HTML Coming Soon!</h3>
+                <p class="text-gray-600 dark:text-gray-400 mb-6">We're working on enhancing the import feature. Stay tuned for updates!</p>
+                <button class="w-full px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition" onclick="document.getElementById('importHtmlModal').classList.add('hidden')">
+                    Got it
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Settings Modal -->
+    <div id="settingsModal" class="fixed inset-0 z-[9999] flex items-center justify-center hidden">
+        <div class="fixed inset-0 bg-black/50 backdrop-blur-sm"></div>
+        <div class="bg-white dark:bg-gray-800 rounded-2xl p-6 shadow-xl relative z-10 w-[400px] transform transition-all scale-100">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Settings</h3>
+                <button class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200" onclick="this.closest('#settingsModal').classList.add('hidden')">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            
+            <div class="space-y-6">
+                <!-- Appearance Section -->
+                <div>
+                    <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Appearance</h4>
+                    
+                    <!-- Dark Mode Toggle -->
+                    <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg mb-3">
+                        <div class="flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600 dark:text-gray-400 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                            </svg>
+                            <span class="text-sm text-gray-700 dark:text-gray-300">Dark Mode</span>
+                        </div>
+                        <button id="settings-dark-toggle" class="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-200 dark:bg-gray-700 transition-colors">
+                            <span class="inline-block h-4 w-4 transform rounded-full bg-white dark:bg-gray-200 transition-transform translate-x-1 dark:translate-x-6"></span>
+                        </button>
+                    </div>
+                    
+                    <!-- Model Color Display Toggle -->
+                    <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg mb-3">
+                        <div class="flex items-center">
+                            <i class="fas fa-fill-drip h-5 w-5 text-gray-600 dark:text-gray-400 mr-3"></i>
+                            <span class="text-sm text-gray-700 dark:text-gray-300">Display model tier color</span>
+                        </div>
+                        <button id="settings-model-color-toggle" class="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-200 dark:bg-gray-700 transition-colors">
+                            <span class="inline-block h-4 w-4 transform rounded-full bg-white dark:bg-gray-200 transition-transform translate-x-1"></span>
+                        </button>
+                    </div>
+
+                    <!-- Sidebar Position Toggle -->
+                    <div class="flex items-center justify-between p-3 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
+                        <div class="flex items-center">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-600 dark:text-gray-400 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M4 6h16M4 12h16M4 18h7" />
+                            </svg>
+                            <span class="text-sm text-gray-700 dark:text-gray-300">Left-sided Sidebar</span>
+                        </div>
+                        <button id="settings-sidebar-toggle" class="relative inline-flex h-6 w-11 items-center rounded-full bg-gray-200 dark:bg-gray-700 transition-colors">
+                            <span class="inline-block h-4 w-4 transform rounded-full bg-white dark:bg-gray-200 transition-transform translate-x-1"></span>
+                        </button>
+                    </div>
+                </div>
+                <div>
+                    <h4 class="text-sm font-medium text-gray-700 dark:text-gray-300 mb-3">Assistant Prompt (Refresh needed to apply)</h4>
+                    <textarea id="assistant-prompt-input" rows="4" class="w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white" placeholder="Enter assistant prompt"></textarea>
+                    <div class="mt-2 flex space-x-2">
+                        <button id="save-assistant-prompt" class="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600">Save</button>
+                        <button id="restore-assistant-prompt" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 dark:bg-gray-600 dark:text-gray-200">Restore Default</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="app.js"></script>
+</body>
+</html>
